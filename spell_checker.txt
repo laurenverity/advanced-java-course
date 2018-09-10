@@ -1,0 +1,115 @@
+package spell_checker;
+
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.util.HashSet;
+import java.util.Scanner;
+import java.util.StringTokenizer;
+import java.util.TreeSet;
+
+public class Spell_Checker {
+	
+ private HashSet<String> Dictionary = new HashSet<String>();
+ private TreeSet<String> misspelled_words = new TreeSet<String>();
+ 
+ Scanner inputStream = null; 
+
+ public Spell_Checker() throws FileNotFoundException {
+	 inputStream = new Scanner(new FileInputStream("dictionary"));
+	 while(inputStream.hasNextLine()) {
+		 String nextWord = inputStream.nextLine();
+		 Dictionary.add(nextWord);
+	 }
+ }
+ 
+ 
+ public void checkSpelling(String fileName) throws FileNotFoundException {
+	 System.out.println("======== Spell checking " + fileName + " =========");
+	 
+	 misspelled_words.clear();
+	 
+	 inputStream = new Scanner(new FileInputStream(fileName));
+	 Scanner scan = new Scanner(System.in);
+	 while(inputStream.hasNext()) {
+		 String line = inputStream.nextLine();
+		 StringTokenizer st = new StringTokenizer(line, " \t,.;:-%'\"");
+		 while(st.hasMoreTokens()) {
+			 String next = st.nextToken();
+			 next = next.toLowerCase();
+			 if(!(Character.isLetter(next.charAt(0)))){
+				 continue;
+			 }
+			 else if (Dictionary.contains(next)) {
+				 continue;
+			 }
+			 else if(misspelled_words.contains(next)) {
+				 continue;
+			 }
+			 else if (next.charAt(next.length()-1)=='s'){
+				 StringBuilder sb = new StringBuilder(next);
+				 sb.deleteCharAt(next.length()-1);
+				 if (Dictionary.contains(next)||misspelled_words.contains(next)) {
+					 continue;
+				 }
+				 else {
+					 System.out.println(next + " is not in dictionary. Would you like to add "+ next + " to the dictionary? y/n");
+						if (scan.nextLine().equals("y")){
+							Dictionary.add(next);
+						}
+						else
+							misspelled_words.add(next);
+				 }
+			 }
+				 
+				 	
+			 else {
+				System.out.println(next + " is not in dictionary. Would you like to add "+ next + " to the dictionary? y/n");
+				if (scan.nextLine().equals("y")){
+					Dictionary.add(next);
+				}
+				else {
+					misspelled_words.add(next);
+				}
+			 }
+				 
+		 
+		 }
+		 //scan.close();
+		// inputStream.close();
+	 }
+		 }
+	 
+ 
+ // Print line containing miss-spelled word(make sure you only print it once if multiple miss-spelled words are found on this line)
+
+ // Ask the user if he wants the word added to the dictionary or the miss-spelled words and add word as specified by the user
+
+
+ 
+
+ public void dump_misspelled_words()
+ {
+	for(String x:misspelled_words) {
+		System.out.println(x);
+	}
+ }
+
+
+ public static void main(String[] args) {
+
+ try {
+ Spell_Checker spellCheck = new Spell_Checker();
+ 
+ for (int i=0; i < args.length; i++)
+ {
+ spellCheck.checkSpelling(args[i]);
+ spellCheck.dump_misspelled_words();
+ }
+ }
+ catch (FileNotFoundException e)
+ {
+ System.out.println(e);
+ }
+
+ }
+}
