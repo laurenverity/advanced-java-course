@@ -1,0 +1,455 @@
+import java.awt.Color;
+	import java.awt.Graphics;
+	import java.awt.Point;
+	import java.util.ArrayList;
+
+	enum DrawType{scribble, rectangle, oval, line};
+
+
+	
+	class DrawingProperties{
+		DrawType drawType;
+		boolean filled;
+		Color color;
+		DrawingProperties(DrawType drawType, Color color, boolean filled){
+			this.drawType = drawType;
+			this.color = color;
+			this.filled = filled;
+		}
+		
+		public String toString() {
+			return drawType + "Color=" + color + "filled =" + filled;
+		}
+	}
+
+	public class Drawing {
+		
+			DrawingProperties drawingProperties = new DrawingProperties(DrawType.rectangle, Color.black, false); 
+			
+			ArrayList<Shape> shapeArr = new ArrayList<Shape>();
+			Shape inProgress = null;
+			
+			
+			public String toString() {
+				return drawingProperties.toString();
+			}
+			
+			public void draw(Graphics g) {
+				for(int i =0; i<shapeArr.size(); i++) {
+					Shape s = shapeArr.get(i);
+					s.draw(g);
+				}
+				
+				if (inProgress != null) {
+					inProgress.draw(g);
+				}
+			}
+			
+			public void setFilled(boolean filled) {
+				drawingProperties.filled = filled;
+			}
+			
+			public void setColor(Color color) {
+				drawingProperties.color = color;
+			}
+			
+			public void setDrawType(DrawType drawType) {
+				drawingProperties.drawType = drawType;
+			}
+			
+			public void mousePressed(Point p) {
+				switch(drawingProperties.drawType) {
+				case rectangle:
+					inProgress = new Rectangle(drawingProperties.color, drawingProperties.filled);
+					break;
+				case oval:
+					inProgress = new Oval(drawingProperties.color, drawingProperties.filled);
+					break;
+				case line:
+					inProgress = new Line(drawingProperties.color);
+					break;
+				case scribble:
+					inProgress = new Scribble(drawingProperties.color);
+					break;
+				}
+				inProgress.firstPoint(p);
+			}
+			public void mouseDragged(Point p) {
+				switch(drawingProperties.drawType) {
+				case rectangle:
+				case oval:
+				case scribble:
+				case line:
+					inProgress.subsequentPoint(p);
+					break;
+				}
+			}
+			
+			public void mouseReleased(Point p) {
+				inProgress.subsequentPoint(p);
+				shapeArr.add(inProgress);
+				inProgress = null;
+			}
+
+	}
+
+		
+
+	abstract class Shape
+	{
+		Color color;
+		Shape (Color c)
+		{
+			color = c;
+		}
+		
+		abstract void firstPoint (Point p);
+		abstract void draw(Graphics g);
+		abstract void subsequentPoint (Point p);
+	}
+
+	class Rectangle extends Shape
+	{
+		boolean filled = false;
+		Point start;
+		Point lastPoint;
+		Rectangle(Color c, boolean filled)
+		{
+			super(c);
+			lastPoint = start;
+			this.filled = filled;
+		}
+		void firstPoint(Point p)
+		{
+			start = p;
+			lastPoint = p;
+		}
+		
+		void draw(Graphics g) {
+			g.setColor(color);
+			int x = Math.min(start.x, lastPoint.x);
+			int y = Math.min(start.y, lastPoint.y);
+			int w = Math.abs(start.x - lastPoint.x);
+			int h = Math.abs(start.y - lastPoint.y);
+			if (filled) 
+				g.fillRect(x, y, w, h);
+			else
+				g.drawRect(x, y, w, h);
+				
+			}
+		
+		void subsequentPoint(Point p) {
+			lastPoint = p;
+		}
+		
+		}
+
+	class Scribble extends Shape
+	{
+		
+		ArrayList<Point> points = new ArrayList<Point>();
+		Scribble(Color c){
+			super(c);
+		}
+		
+		void firstPoint(Point p) {
+			points.add(p);
+		}
+		
+		void draw(Graphics g) {
+			g.setColor(color);
+			for (int i = 1; i<points.size(); i++) {
+				Point first = points.get(i-1);
+				Point next = points.get(i);
+				g.drawLine(first.x, first.y, next.x, next.y);
+			}
+		}
+		
+		void subsequentPoint(Point p) {
+			points.add(p);		
+		}
+		
+	}
+
+	class Oval extends Shape
+	{
+		boolean filled = false;
+		Point start;
+		Point lastPoint;
+		Oval(Color c, boolean filled)
+		{
+			super(c);
+			lastPoint = start;
+			this.filled = filled;
+		}
+		void firstPoint(Point p)
+		{
+			start = p;
+			lastPoint = p;
+		}
+		
+		void draw(Graphics g) {
+			g.setColor(color);
+			int x = Math.min(start.x, lastPoint.x);
+			int y = Math.min(start.y, lastPoint.y);
+			int w = Math.abs(start.x - lastPoint.x);
+			int h = Math.abs(start.y - lastPoint.y);
+			if (filled) 
+				g.fillOval(x, y, w, h);
+			else
+				g.drawOval(x, y, w, h);
+				
+			}
+		
+		void subsequentPoint(Point p) {
+			lastPoint = p;
+		}
+		
+	}
+
+	class Line extends Shape
+	{
+		Point start;
+		Point lastPoint;
+		Line(Color c)
+		{
+			super(c);
+			lastPoint = start;
+		}
+		void firstPoint(Point p)
+		{
+			start = p;
+			lastPoint = p;
+		}
+		
+		void draw(Graphics g) {
+			g.setColor(color);
+			
+			int x1 = (int)start.getX();
+			int y1 = (int)start.getY();
+			int x2 = (int)lastPoint.getX();
+			int y2 = (int)lastPoint.getY();
+			g.drawLine(x1,y1,x2,y2);
+				System.out.println(x1);
+			}
+		
+		void subsequentPoint(Point p) {
+			lastPoint = p;
+		}
+		
+	
+
+}
+
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.FlowLayout;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+import javax.swing.ButtonGroup;
+import javax.swing.JCheckBox;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+
+public class DrawingProgram2 extends JFrame implements ActionListener {
+	
+	DrawingPanel drawingPanel = new DrawingPanel();
+	JCheckBox filled = new JCheckBox("filled");
+
+
+	
+	DrawingProgram2(){
+		super("my prog");
+		String[] colors = {"red", "green", "blue"};
+		String[] shapes = {"rectangle","oval","line","scribble"};
+		setSize(800,400);
+		setDefaultCloseOperation(EXIT_ON_CLOSE);
+		layout(colors,shapes);
+		setVisible(true);
+	}
+	public void actionPerformed(ActionEvent e) {
+		String action = e.getActionCommand();
+		System.out.println(action);
+		switch(action) {
+		case "red":
+			drawingPanel.drawing.setColor(Color.red);
+			break;
+		case "green":
+			drawingPanel.drawing.setColor(Color.green);
+			break;
+		case "blue":
+			drawingPanel.drawing.setColor(Color.blue);
+			break;
+		case "rectangle":
+			drawingPanel.drawing.setDrawType(DrawType.rectangle);
+			filled.setVisible(true);
+			break;
+		case "oval":
+			drawingPanel.drawing.setDrawType(DrawType.oval);
+			filled.setVisible(true);
+			break;
+		case "line":
+			drawingPanel.drawing.setDrawType(DrawType.line);
+			filled.setVisible(false);
+			break;
+		case "scribble":
+			drawingPanel.drawing.setDrawType(DrawType.scribble);
+			filled.setVisible(false);
+			break;
+		case "filled":
+			 if (filled.isSelected()) {
+				drawingPanel.drawing.setFilled(true);
+			}
+			else 
+				drawingPanel.drawing.setFilled(false);
+		default:
+			;
+		}
+	}
+		
+	public void layout(String[] arr, String[] arr2) {
+		drawingPanel.drawing.setColor(Color.red);
+		drawingPanel.drawing.setDrawType(DrawType.rectangle);
+		BorderLayout manager = new BorderLayout();
+		setLayout(manager);
+		
+		//add west panel + components
+		JPanel west = new JPanel();
+		west.setLayout(new GridLayout(0,1));
+		
+		JRadioButton blue = new JRadioButton("blue");
+		blue.addActionListener(this);
+		west.add(blue);
+		
+		JRadioButton red = new JRadioButton("red");
+		red.addActionListener(this);
+		west.add(red);
+		
+		JRadioButton green = new JRadioButton("green");
+		green.addActionListener(this);
+		west.add(green);
+		
+		ButtonGroup colors = new ButtonGroup();
+		colors.add(green);
+		colors.add(red);
+		colors.add(blue);
+		
+		add(west,BorderLayout.WEST);
+		
+		//add North panel + components
+		JPanel north = new JPanel();
+		north.setLayout(new FlowLayout());
+		
+		filled.addActionListener(this);
+		north.add(filled);
+		
+		JRadioButton rectangle = new JRadioButton("rectangle");
+		rectangle.addActionListener(this);
+		north.add(rectangle);
+		
+		JRadioButton line = new JRadioButton("line");
+		line.addActionListener(this);
+		north.add(line);
+		
+		JRadioButton scribble = new JRadioButton("scribble");
+		scribble.addActionListener(this);
+		north.add(scribble);
+		
+		JRadioButton oval = new JRadioButton("oval");
+		oval.addActionListener(this);
+		north.add(oval);
+		
+		ButtonGroup shape = new ButtonGroup();
+		shape.add(oval);
+		shape.add(rectangle);
+		shape.add(scribble);
+		shape.add(line);
+	
+		add(north, BorderLayout.NORTH);
+		
+		add(drawingPanel,BorderLayout.CENTER);
+
+		
+	}
+	
+
+	public static void main(String[] args) {
+		DrawingProgram2 d = new DrawingProgram2();
+		d.setVisible(true);
+	}
+
+	
+	
+
+}
+
+
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Image;
+import java.awt.Insets;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.Scanner;
+
+import javax.swing.JPanel;
+
+	
+	public class DrawingPanel extends JPanel {
+		
+		Drawing drawing = new Drawing();
+		
+		DrawingPanel()
+		{
+			setSize(800,400);
+			MyMouseHandler mmh = new MyMouseHandler();
+			addMouseListener(mmh);
+			addMouseMotionListener(mmh);
+			setVisible(true);
+		}
+		
+		public void paint(Graphics g) {
+
+			Dimension dimen = getSize();
+
+			Insets insets = getInsets();
+			int top = insets.top;
+			int left = insets.left;
+			g.setColor(Color.white);
+			g.fillRect(0,0, dimen.width, dimen.height);
+			
+			drawing.draw(g);
+			
+			g.setColor(Color.black);
+		}
+
+
+		class MyMouseHandler extends MouseAdapter
+		{
+			public void mousePressed(MouseEvent e) {
+				drawing.mousePressed(e.getPoint());
+				repaint();
+			}
+			
+			public void mouseReleased(MouseEvent e) {
+				drawing.mouseReleased(e.getPoint());
+				repaint();
+			}
+			
+			public void mouseDragged(MouseEvent e) {
+				drawing.mouseDragged(e.getPoint());
+				repaint();
+			}
+		}
+		
+		public static void main(String[] args) {
+			
+		DrawingPanel dp = new DrawingPanel();
+	
+		}
+	}
+	}

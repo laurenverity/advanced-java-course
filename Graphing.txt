@@ -1,0 +1,170 @@
+package graphing;
+
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Insets;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.util.ArrayList;
+import java.util.Scanner;
+
+import javax.swing.JFrame;
+
+
+public class graphBeginnings extends JFrame{
+
+	private static final long serialVersionUID = 1L;
+	
+	ArrayList<Graph> gbarArr = new ArrayList<Graph>();
+	
+	FileInputStream fis = null;
+	
+	graphBeginnings(ArrayList<Graph> garr){
+		super("Graph Beginnings");
+		gbarArr = garr;
+		setSize(600,600);
+		setVisible(true);
+		setDefaultCloseOperation(EXIT_ON_CLOSE);
+	}
+	
+	//Find the maximum width of the strings in pixels
+	
+	int getMaxTextWidth(ArrayList<Graph> garr, FontMetrics fm) {
+		int maxValue =0;
+		for (int i = 0; i< garr.size(); i++) {
+			int width = fm.stringWidth(garr.get(i).text);
+			if(width>maxValue)
+				maxValue = width;
+		}
+		return maxValue;
+	}
+	
+	//find the max value in ArrayList
+	
+	int getMaxBarWidth(ArrayList<Graph> garr) {
+		int maxValue = 0;
+		for (int i =0; i<garr.size(); i++) {
+			int value = garr.get(i).value;
+			if (value>maxValue) {
+				maxValue = value;
+			}
+		}
+			return maxValue + 4;	
+	}
+	
+	public void paint(Graphics g) {
+		super.paint(g);
+		Dimension dimen = getSize();
+		Insets insets = getInsets();
+		int top = insets.top;
+		int left = insets.left;
+		int right = insets.right;
+		
+		Font font = g.getFont();
+		FontMetrics fm = getFontMetrics(font);
+		int fontHeight = fm.getHeight();
+		int maxAscent = fm.getMaxAscent();
+		
+		int strMaxWidth = left + 10 + getMaxTextWidth(gbarArr, fm);
+		int x_bar_start = strMaxWidth + 1;/* a little white space pad*/
+		
+		int barMaxValue = getMaxBarWidth(gbarArr);
+		double scale = (dimen.width -x_bar_start - right)/(double)barMaxValue;
+		Color myColor = new Color(100,200,40);
+
+		int y_start = top + 10;
+		int bar_height = fontHeight;
+		for (int i =0; i<gbarArr.size(); i++) {
+			String text = gbarArr.get(i).text;
+			int strWidth = fm.stringWidth(text);
+			int value = gbarArr.get(i).value;
+			int scaledValue = (int)(value * scale);
+			g.drawString(text, strMaxWidth - strWidth, y_start + maxAscent);
+			g.setColor(myColor);
+			g.fillRect(x_bar_start, y_start, scaledValue, bar_height);
+			g.setColor(Color.black);
+			y_start +=fontHeight + 10;
+		}
+		g.setColor(myColor);
+		g.drawLine(strMaxWidth,top,strMaxWidth,dimen.height);
+		g.setColor(Color.red);
+		g.fillRect(left,top,10,600);
+		g.fillRect(582,top,10,600);
+		g.fillRect(right,top,600,10);
+		g.fillRect(right,582,600,10);
+	
+	}
+	
+	public void getInputValues(String t, ArrayList<Graph> garr) {
+		try {
+			//open scanner to accept input from file
+			 Scanner scan = new Scanner (new FileInputStream(t));
+			 String title = scan.nextLine();
+		
+			 while (scan.hasNext())
+			 {
+				 String Name ="";
+				 String age="";
+				 String in = scan.nextLine();
+				 //put string in char array in order to separate unwanted chars from ints/Strings
+				 char [] charArray = in.toCharArray();
+				 //run input through loop to separate string from int values
+				 for (int i =0; i<charArray.length; i++) {
+					 //if a character is a letter or white space, append it to the Name variable
+					 if(Character.isLetter(charArray[i]) || Character.isWhitespace(charArray[i])) {
+					Name = Name + Character.toString(charArray[i]);
+					 }
+					 //if the character is a digit, append it to the age variable
+						if(Character.isDigit(charArray[i])) {
+							age = age + Character.toString(charArray[i]) ;
+					 }
+						 
+				 }
+				 //add the new object to the array list and parse an integer from the 'age' string
+				 garr.add(new Graph(Name,Integer.parseInt(age)));
+				 
+				 //System.out.println(Name);
+				 //System.out.println(age);
+			}
+				scan.close();
+			 
+		}catch (FileNotFoundException e) {
+			System.out.println("Your file has not been found.");
+		}
+		
+	}
+
+	public static void main(String [] args) {
+		ArrayList<Graph> garr = new ArrayList<Graph>();
+		graphBeginnings gb = new graphBeginnings(garr);
+
+		for (int i = 0; i<args.length;i++) {
+		gb.getInputValues(args[i],garr);
+		}
+		
+	}
+
+}
+
+package graphing;
+
+ class Graph {
+	int value;
+	 String text;
+
+	 Graph(String t, int v) {
+		text = t;
+		value = v;
+	}
+	 Graph(String t){
+		 text = t;
+	 }
+
+	
+	
+	
+}
+

@@ -1,0 +1,445 @@
+package file_server;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PrintStream;
+import java.net.Socket;
+import java.util.Scanner;
+
+public class EchoServer implements Runnable, Cloneable {
+
+	Socket clientSocket = null;
+	Thread myThread = null;
+	
+	public void handleConnect(Socket s) {
+		clientSocket = s;
+		try {
+			Runnable protocol_handler = (Runnable)clone();
+			Thread myThread = new Thread(protocol_handler);
+			System.out.println("Launching a new Child Thread");
+			myThread.start();
+		}
+		catch(CloneNotSupportedException e) {
+			System.out.println("EchoServer.handleConnect Clone error: " + e);	
+		}
+	}
+	
+	public void run() {
+		InputStream is = null;
+		OutputStream os= null;
+		
+		try {
+			is = clientSocket.getInputStream();
+			os = clientSocket.getOutputStream();
+			
+			processStream(is,os);
+		}
+		catch(IOException e) {
+			System.out.println("Echo Server exception: " + e);
+		}
+		
+		finally
+		{
+			try {
+				if (is!=null) is.close();
+				if (os!=null) os.close();	
+			}
+			
+			catch (IOException e) {
+				System.out.println("run: Stupid exception that shouldn't happen: " + e);
+			}
+		}
+		System.out.println("Exiting Child Server Thread");
+	}
+	
+	public void processStream(InputStream is, OutputStream os) {
+		System.out.println("EchoServer.processStream begins");
+		Scanner input = new Scanner(is);
+		PrintStream ps = new PrintStream(os);
+		
+		while(input.hasNextLine())
+		{
+			processNextLine(input,ps);
+		}
+		input.close();
+		ps.close();
+		System.out.println("Exiting ProcessStream");
+	}
+	
+	public void processNextLine(Scanner input, PrintStream ps) {
+		String s = input.nextLine();
+		ps.println(s);
+		System.out.println("EchoServer echoed" + s);
+	}
+	
+	public void monitorServer() {
+		MotherServer  myServer = new MotherServer();
+		System.out.println(MotherServer.getHostInfo());
+		myServer.startServer(4444, this);
+		
+		Scanner keyboard = new Scanner(System.in);
+		String s="";
+		while(!s.equals("quit")) {
+			System.out.println("Whenever you want to end server connection, enter quit");
+			s = keyboard.next();
+		}
+		keyboard.close();
+		myServer.stopServer();
+	}
+	
+	public static void main(String[] args) {
+	EchoServer es = new EchoServer();
+	es.monitorServer();
+	System.out.println("Exiting echoserver");
+	}
+
+}
+
+package file_server;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Scanner;
+import java.util.StringTokenizer;
+//all the code from JH2
+
+public class File_Server extends EchoServer {
+
+	StringTokenizer parseCommand;
+	 Scanner scan = null;
+	 PrintStream outputPS = null;
+	 
+	 public void delete()
+	 {
+		File f = getFile(); 
+		if (f!=null) {
+		outputPS.println("Processing: delete " + f.getAbsolutePath());
+		if(f.delete()) {
+			outputPS.println("Your file was deleted.");
+		}
+		else
+			outputPS.println("Your file was not deleted.");
+		}
+		else
+		outputPS.println("null");
+		outputPS.println("");
+	 }
+
+	 
+	 public void rename()
+	 {
+		outputPS.println("Renaming file.");
+		String fileName = parseCommand.nextToken();
+		File f = new File(fileName);
+		String replacementName = parseCommand.nextToken();
+		File f2 = new File(replacementName);
+		f.renameTo(f2);
+		f.delete();
+		if (f.renameTo(f2)) {
+			outputPS.println("Your file could not be renamed.");
+			outputPS.println("");
+
+		}
+		else 
+			outputPS.println("Your file was renamed: " + f2.getAbsolutePath());
+		outputPS.println("");
+
+	}
+	 
+	 public void list()
+	 {
+		 File f = getFile();
+		 if (f!=null) {
+		 outputPS.println("Running list routine.");
+		 String [] files = f.list();
+		 for (String afiles:files) {
+			 outputPS.println(afiles);
+		 }
+		 }
+		 else 
+			outputPS.println("File is null.");
+			outputPS.println("");
+
+	 }
+	 public void size()
+	 {
+		 File f = getFile();
+		 if(f!=null) {
+			 if(f.exists()) {
+				 outputPS.println("Size for" + f.getAbsolutePath());
+				 long length = f.length();
+				 outputPS.println("is" + length);
+					outputPS.println("");
+			 }
+			 
+		 }
+		 else {
+			outputPS.println("Your file was not found");
+			outputPS.println("");
+		 }
+		}
+
+	 
+	 public void lastModified()
+	 {
+		 
+		File f = getFile();
+		 outputPS.println("Finding date last modified for " + f);
+		 long d = f.lastModified();
+		 Calendar cal = Calendar.getInstance();
+		 cal.setTimeInMillis(d);
+		 
+		 outputPS.println("File last modified: " + cal.getTime());
+			outputPS.println("");
+
+	 }
+	 
+	 public void mkdir()
+	 {
+		 File f = getFile();
+		 if (f!=null) {
+		 outputPS.println("Creating directory for " + f.getAbsolutePath());
+		 f.mkdir();
+		 if (f.mkdir()) {
+			 outputPS.println("Directory was not created.");
+		 }
+		 else
+			 outputPS.println("Your Directory was created.");
+	 }
+		 else
+			 outputPS.println("null");
+		 outputPS.println("");
+	 }
+	 
+	 public void createFile()
+	 {
+		 File f = getFile();
+		 if(f!=null) {
+		 outputPS.println("Creating a file for " + f);		 
+		 outputPS.println("File created:" + f.getAbsolutePath());
+		try {
+			ArrayList <String> inputArr = new ArrayList<String>();
+			 int i = 0;
+		while(parseCommand.hasMoreTokens()){
+			String var = parseCommand.nextToken();
+			inputArr.add(i, var);
+			i++;
+		 }
+	
+		PrintStream is = new PrintStream(new FileOutputStream(f));
+		for(int j = 0; j<inputArr.size(); j++) {
+		is.println(inputArr.get(j));
+		}
+		outputPS.println("");
+		is.close();
+			
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+		 }
+		 else 
+			 System.out.println("File is null");
+	 }
+	 
+	 public void printFile()
+	 {
+		 File f = getFile();
+		 if (f!=null) {
+		try {
+			FileInputStream fis = new FileInputStream(f);
+			Scanner s = new Scanner(fis);
+			outputPS.println("Printing " + f);
+			while(s.hasNextLine()) {
+				outputPS.println(s.nextLine());
+			}
+			s.close();
+			outputPS.println("");
+		} catch (FileNotFoundException e) {
+			outputPS.println("Your file does not exist.");
+		}
+	 }
+	 }
+	 void printUsage()
+	 {
+		outputPS.println("quit program\r\n" + "delete filename\r\n" + "rename oldFilename newFilename\r\n" + "size filename\r\n" + 
+	 "lastModified filename\r\n" + "list dir\r\n" + "printFile filename\r\n" + "createFile filename\r\n" + "mkdir dir");
+		outputPS.println("");
+
+		// System.out.println("quit\r\n" + "delete filename\r\n" + "rename oldFilename newFilename\r\n" + "size filename\r\n" + 
+				// "lastModified filename\r\n" + "list dir\r\n" + "printFile filename\r\n" + "createFile filename\r\n" + "mkdir dir");
+	 }
+
+	 private String getNextToken()
+	 {
+	 if (parseCommand.hasMoreTokens())
+	 return parseCommand.nextToken();
+	 else
+	 return null;
+	 }
+
+	 private File getFile()
+	 {
+	 File f = null;
+	 String fileName = getNextToken();
+	 if (fileName == null)
+		 outputPS.println("Missing a File name");
+	 else
+	 f = new File(fileName);
+	 return f;
+	 }
+	 
+	 public boolean processCommandLine(String line)
+	 {
+		 boolean status = true;
+		 if (line==null)
+			 return false;
+		 if (!line.equals(null)) {
+		 parseCommand = new StringTokenizer(line);
+		 String command = getNextToken();
+		 if (command == null) {
+			 outputPS.println("No command");
+		 }
+		 else {
+			switch(command){
+			case "delete" : delete();
+			break;
+			case "createFile" : createFile();
+			break;
+			case "printFile" : printFile();
+			break;
+			case "lastModified" : lastModified();
+			break;
+			case "size" : size();
+			break;
+			case "rename" : rename();
+			break;
+			case "mkdir" : mkdir();
+			break;
+			case "?" : printUsage();
+			break;
+			case "list" : list();
+			break;
+			case "quit" : System.exit(0);
+			status = false;
+			break;
+			default: outputPS.println("Bad command.");
+			status= false;
+			break;
+			}
+		 }
+		 }
+		 else
+			 status = false;
+		//outputPS.println("");
+		 return status;
+		 }
+	 
+		 //create streams for input/output, then assign boolean to the process
+	 //command line. The while loop tests to see if the command routine is still operating.
+	 public void processStream(InputStream is, OutputStream os) {
+		 Scanner input = new Scanner(is);
+		 outputPS = new PrintStream(os);
+		 boolean greenLight = true;
+		 while(greenLight && input.hasNextLine()) {
+			 String line = input.nextLine();
+			 System.out.println(line);
+			 greenLight = processCommandLine(line);
+		 }
+		//running this now!
+		 input.close();
+		 outputPS.close();
+		 System.out.println("Exiting");
+	 }
+	 public static void main(String[] args)
+	 {
+	File_Server fs = new File_Server();
+	fs.monitorServer();
+	System.out.println("Exiting fileserver");
+	 }
+	 }
+	 
+	 package file_server;
+
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.UnknownHostException;
+
+public class MotherServer implements Runnable {
+	ServerSocket serverSocket = null;
+	int portNum=-1;
+	EchoServer echoServer = null;
+	boolean continueListening = true;
+	Thread myThread = null;
+	
+	boolean startServer(int portNum,EchoServer echoServer)
+	{
+		this.portNum = portNum;
+		try {
+			serverSocket = new ServerSocket(portNum);
+		}
+		catch (IOException e) {
+			System.out.println("Server socket connect error: " + e);
+			return false;
+		}
+		this.echoServer = echoServer;
+		myThread = new Thread(this);
+		myThread.start();
+		return true;
+	}
+	
+	public void run()
+	{
+		continueListening = true;
+		while(continueListening) {
+			try {
+				Socket sock = serverSocket.accept();
+				System.out.println("Request recieved");
+				echoServer.handleConnect(sock);
+			}
+			catch(IOException e) {
+				System.out.println("ServerSocket accept error: " + e);
+				continueListening = false;
+			}
+		}
+		System.out.println("MYServer run thread exiting");
+	}
+
+	public void stopServer() {
+		continueListening = false;
+		try {
+			serverSocket.close();
+		}
+		catch(IOException e) {
+			System.out.println("stopServer error: " + e);
+		}
+	}
+	
+	static String getHostInfo() {
+		String retStr="";
+		try {
+			InetAddress iaddr = InetAddress.getLocalHost();
+			retStr=String.format("Host:%s ipaddr=%s", iaddr.getHostName(),iaddr.getHostAddress());
+		}
+		catch(UnknownHostException e) {
+			retStr = e.toString();
+		}
+		
+		return retStr;
+	}
+	
+	public static void main(String[] args) {
+		// TODO Auto-generated method stub
+
+	}
+
+}
